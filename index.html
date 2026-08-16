@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TYR.pages</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topnav">
+  <div class="topnav-inner">
+    <a href="#/" class="wordmark">TYR<span class="wordmark-dim">.pages</span></a>
+    <nav class="tabs" id="tabs">
+      <a href="#/maps" data-route="maps">Maps</a>
+      <a href="#/players" data-route="players">Players</a>
+      <a href="#/matches" data-route="matches">Matches</a>
+      <a href="#/tanks" data-route="tanks">Tanks</a>
+      <a href="#/best-battles" data-route="best-battles">Best Battles</a>
+      <a href="#/upload" data-route="upload">Upload</a>
+    </nav>
+    <div class="updated" id="updated">&nbsp;</div>
+    <div class="auth-widget" id="auth-widget"></div>
+  </div>
+</header>
+<main id="app" aria-live="polite"></main>
+<!-- Upload progress lives OUTSIDE #app: the router replaces #app on every
+     navigation, so anything inside it dies when you leave the page. People
+     queue a batch and go elsewhere, and the uploads keep running. -->
+<aside id="jobs-dock" class="jobs-dock" hidden></aside>
+<footer class="site-footer"><a href="#/about">About this data</a></footer>
+<script src="app.js"></script>
+</body>
+</html>
