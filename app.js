@@ -1484,13 +1484,19 @@
 
     var wide = onlineRange === "all";
     var pt = (d.events || []).filter(function (e) { return e.kind === "playtest"; })[0];
+    var next = (d.events || []).filter(function (e) { return e.kind === "upcoming"; })[0];
     var head = "";
     if (pt && !wide) {
       var ext = (pt.extended || []).length;
+      var over = pt.end && pt.end * 1000 < Date.now();
       head = '<p class="small" style="margin:-4px 0 10px">All of this is one playtest, ' +
         esc(fmtDay(pt.start)) + " to " + esc(fmtDay(pt.end)) +
         (ext ? ", extended " + (ext === 1 ? "once" : ext === 2 ? "twice" : fmtNum(ext) + " times") : "") +
-        ".</p>";
+        "." +
+        // Without this the line simply stops and reads like a broken collector.
+        (over ? " It has closed, so the line ends there rather than the counter failing." : "") +
+        (next && next.at ? " The next one starts " + esc(fmtDay(next.at)) + "." : "") +
+        "</p>";
     }
 
     var span = wide
@@ -1505,6 +1511,9 @@
 
     return chips + head + onlineLegend() + onlineChart(s, d.events) +
       '<p class="small" style="margin-top:10px">Peak ' + fmtNum(s.peak) + ". " + esc(span) + "." +
+      (d.steamdb_samples
+        ? " Our own counter samples every couple of minutes; SteamDB fills the stretches it missed."
+        : "") +
       ((s.gaps || []).length
         ? " Breaks in the line are where neither had a number."
         : "") +
@@ -2191,6 +2200,7 @@
     if (m._hay) return m._hay;
     var bits = [m.map || "", matchBuild(m), m.type || ""];
     (m.uploaded_by || []).forEach(function (u) { bits.push(u); });
+    (m.recorded_by || []).forEach(function (u) { bits.push(u); });
     (m.players || []).forEach(function (p) {
       bits.push(p.label || "");
       if (p.clan) bits.push(p.clan);
@@ -2245,7 +2255,14 @@
 
   function matchCard(m) {
     var href = SHOW_PLAYER_PAGES ? "#/match/" + encodeURIComponent(m.match_id) : null;
+    // Who this match came from. Most of the archive was copied off the site
+    // owner's own disk rather than uploaded, so "from <name>" appeared on some
+    // cards and nothing at all on the rest, which read as missing data. Fall
+    // back to who recorded it (see _attach_recorders) so every card says where
+    // it came from, and keep the two wordings distinct because they are
+    // different claims.
     var uploader = (m.uploaded_by || [])[0];
+    var recorder = uploader ? null : (m.recorded_by || [])[0];
     var len = fmtDuration(m.duration_sec);
     var meta = [];
     if (len) meta.push('<span class="mc-meta-item">' + esc(len) + "</span>");
@@ -2260,7 +2277,12 @@
       '<div class="mc-mid">' + resultChip(m.win_type) +
         '<span class="mc-score" title="Final HP, both teams">' + scoreText(m) + "</span></div>" +
       '<div class="mc-foot">' + meta.join("") +
-        (uploader ? '<span class="mc-up">from ' + esc(uploader) + "</span>" : "") +
+        (uploader
+          ? '<span class="mc-up">from ' + esc(uploader) + "</span>"
+          : recorder
+            ? '<span class="mc-up" title="Recorded on this machine, not uploaded">recorded by ' +
+              esc(recorder) + "</span>"
+            : "") +
       "</div>";
     return href
       ? '<a class="match-card" href="' + href + '">' + inner + "</a>"
@@ -2430,10 +2452,14 @@
     // opposite teams can each upload their own recording of the same match,
     // and that pairing is exactly what gets it corroborated.
     var upBy = m.uploaded_by || [];
+    var recBy = m.recorded_by || [];
     var credit = "";
     if (upBy.length) {
       credit = ' &middot; <span class="match-credit">Uploaded by ' +
         upBy.map(esc).join(" and ") + "</span>";
+    } else if (recBy.length) {
+      credit = ' &middot; <span class="match-credit">Recorded by ' +
+        recBy.map(esc).join(" and ") + "</span>";
     }
 
     APP.innerHTML =
@@ -2538,9 +2564,14 @@
       var mapLink = r.map_slug
         ? '<a href="#/map/' + encodeURIComponent(r.map_slug) + '">' + esc(r.map || "?") + "</a>"
         : esc(r.map || "-");
+      // A private row keeps its numbers and loses the match link, the date and
+      // the result, so nothing here leads back to the person. See
+      // BEST_BATTLE_KEEP_FIELDS in cloudflare/src/redact.js.
       var dateCell = r.match_id
         ? '<a href="#/match/' + encodeURIComponent(r.match_id) + '">' + esc(fmtDateTime(r.captured_unix)) + "</a>"
-        : esc(fmtDateTime(r.captured_unix));
+        : (r.captured_unix == null
+            ? '<span class="dim">-</span>'
+            : esc(fmtDateTime(r.captured_unix)));
       var bg = r.map_slug
         ? ' style="background-image:url(assets/maps/' + encodeURIComponent(r.map_slug) + '.png)"'
         : "";
@@ -2550,10 +2581,7 @@
         '<td class="tank">' + tankCell(r.tank, r.tank_id) + "</td>" +
         "<td>" + mapLink + "</td>" +
         "<td>" + dateCell + "</td>" +
-        // a private player's row is still shown here for its numbers, but its
-        // result is nulled -- that's "not published", not "unknown outcome",
-        // so it gets a dash rather than personalChip's UNKNOWN chip.
-        "<td>" + (r.result == null ? "-" : personalChip(r.result)) + "</td>" +
+        "<td>" + (r.result ? personalChip(r.result) : '<span class="dim">-</span>') + "</td>" +
         '<td class="num' + (bbState.key === "dmg" ? " bb-active" : "") + '">' + fmtNum(r.dmg) + "</td>" +
         '<td class="num' + (bbState.key === "kills" ? " bb-active" : "") + '">' + fmtNum(r.kills) + "</td>" +
         '<td class="num' + (bbState.key === "assist" ? " bb-active" : "") + '">' + fmtNum(r.assist) + "</td>" +
@@ -3225,7 +3253,7 @@
           : "") +
         "</a>";
     }).join("");
-    return '<div class="panel"><h2>Tanks</h2><div class="roster-grid">' + cards +
+    return '<div class="panel"><h2>The roster</h2><div class="roster-grid">' + cards +
       '</div><p class="small" style="margin-top:12px">HP, damage, pen, top speed and reload are ' +
       "tyrhq's published figures. Kill range, average speed and abilities per game are measured " +
       "from replays.</p></div>";
@@ -3281,6 +3309,9 @@
   // blend of the two heat clouds makes contested ground read amber/yellow
   // (green + red light = yellow).
   var TEAM_RGB = { 0: "34,197,94", 1: "239,68,68" };  // green / red
+  // Line count the heat alpha is tuned against -- about what one match draws.
+  // See mapHeatTeam: anything denser is scaled down so it stops clipping.
+  var HEAT_REF_LINES = 40;
   // same two team colors as hex, for SVG charts (the canvas map builds
   // rgba() strings from TEAM_RGB instead). Kept in sync by hand -- two
   // representations of one pair of colors, so a change means editing both.
@@ -3669,11 +3700,31 @@
   function mapHeatTeam(C) {
     var lines = mapS.data.trackLines || [];
     if (!lines.length) return;
+    // One match draws about 40 track lines. A map aggregates every match ever
+    // decoded on it and draws up to 6,000, through additive blending, so a
+    // single fixed alpha cannot serve both ends. It was tuned at the match
+    // end, where it looks right; at the map end the strokes piled up until 18%
+    // of the canvas was flat white and the mean pixel sat at 158 against a
+    // match's 10. Blowing out costs exactly the information the heatmap is for
+    // -- once a spot clips to white it stops saying "busier than that one",
+    // and the team colour is gone from the ground with the heaviest traffic.
+    //
+    // So alpha comes down as the line count climbs. sqrt rather than 1/n: an
+    // aggregate really does hold more than one match and should still read
+    // warmer, it just should not saturate. Counted over VISIBLE lines, so
+    // hiding a team via its legend pill brightens what is left instead of
+    // leaving it dimmed for traffic no longer on screen.
+    var visible = 0;
+    for (var k = 0; k < lines.length; k++) {
+      if (mapS.layers["team" + lines[k][0]]) visible++;
+    }
+    if (!visible) return;
+    var dim = Math.min(1, Math.sqrt(HEAT_REF_LINES / visible));
     C.save();
     C.globalCompositeOperation = "lighter";
     C.lineJoin = "round"; C.lineCap = "round";
     [[6, 0.05], [1.5, 0.22]].forEach(function (spec) {
-      var width = spec[0], alpha = spec[1];
+      var width = spec[0], alpha = spec[1] * dim;
       lines.forEach(function (line) {
         var team = line[0], pts = line[1];
         if (!mapS.layers["team" + team]) return;   // team hidden via its legend pill
@@ -4220,10 +4271,31 @@
 
   APP.innerHTML = '<div class="panel"><p class="small">Loading…</p></div>';
 
-  function loadJson(url) {
+  // One failed fetch used to be fatal: any blip put "Could not load the data"
+  // on the screen and left it there until the visitor thought to reload. There
+  // are two ways to get that blip and neither is rare. A deploy rewrites
+  // site_data.json in place, so a request landing mid-write reads a truncated
+  // file and r.json() throws; and the file is 7 MB from a 1 GB box, so a slow
+  // connection can simply give up.
+  //
+  // Both are transient by nature, which is exactly what a retry is for. Three
+  // attempts with a short backoff, then give up and let the caller show the
+  // error. The delay is deliberately longer than a deploy's write window.
+  var LOAD_TRIES = 3;
+
+  function loadJson(url, triesLeft) {
+    var tries = triesLeft == null ? LOAD_TRIES : triesLeft;
     return fetch(url, { cache: "no-store" })
-      .then(function (r) { if (!r.ok) throw new Error("no data"); return r.json(); })
-      .catch(function () { return null; });
+      .then(function (r) {
+        if (!r.ok) throw new Error("http " + r.status);
+        return r.json();          // throws on a half-written file
+      })
+      .catch(function () {
+        if (tries <= 1) return null;
+        var wait = (LOAD_TRIES - tries + 1) * 600;
+        return new Promise(function (res) { setTimeout(res, wait); })
+          .then(function () { return loadJson(url, tries - 1); });
+      });
   }
 
   // Paint the loading state before the fetch, otherwise the page is simply

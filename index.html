@@ -4,6 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TYR.pages</title>
+
+<!-- Link preview. Discord, Slack and the rest read these when somebody pastes
+     the URL; without them a link to this site is a bare grey rectangle. The
+     card itself is drawn by tools/build_og_image.py, which reads the match and
+     player counts out of site_data.json rather than having them typed in here,
+     so it cannot go stale the way a hardcoded number would.
+
+     og:image has to be an absolute URL: the crawler is not on this page and
+     has nothing to resolve a relative one against. -->
+<meta name="description" content="Match history, tanks and maps for the Tyr playtest, built from replay files the game writes to disk.">
+<meta name="theme-color" content="#4f7cff">
+<link rel="canonical" href="https://tyrpages.legomaster188.workers.dev/">
+
+<meta property="og:site_name" content="TYR.pages">
+<meta property="og:type" content="website">
+<meta property="og:title" content="TYR.pages">
+<meta property="og:description" content="Match history, tanks and maps for the Tyr playtest, built from replay files the game writes to disk.">
+<meta property="og:url" content="https://tyrpages.legomaster188.workers.dev/">
+<meta property="og:image" content="https://tyrpages.legomaster188.workers.dev/assets/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="TYR.pages: match history for the Tyr playtest">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TYR.pages">
+<meta name="twitter:description" content="Match history, tanks and maps for the Tyr playtest, built from replay files the game writes to disk.">
+<meta name="twitter:image" content="https://tyrpages.legomaster188.workers.dev/assets/og-card.png">
+
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
