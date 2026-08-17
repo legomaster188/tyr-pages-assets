@@ -7,6 +7,3 @@ Frontend and art for TYR.pages: https://tyrpages.legomaster188.workers.dev
 
 No match or player data lives here. That's fetched at runtime from the API and
 is not part of this repo.
-
-Only what the live site actually serves belongs in here. Unreleased work stays
-out, in the private repo.
