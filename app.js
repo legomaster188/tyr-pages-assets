@@ -4113,65 +4113,6 @@
     return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
   }
 
-  // Every per-match player row in the archive, flattened once.
-  // ---- Suites (#/data and #/data/<slug>) ---------------------------
-  //
-  // A suite is one themed page. The built in ones are declared here; anything
-  // in site/suites/*.js pushes itself onto window.TYR_SUITES and shows up
-  // alongside them with no change to this file. Each one supplies a preview,
-  // which is a real miniature drawn from real numbers, because a wall of
-  // identical icons tells you nothing about what is behind them.
-
-  // The surface a suite file is allowed to use. Everything here is already
-  // defined above; this just names what is supported, so a suite that sticks
-  // to it keeps working when the internals move.
-  // ---- preview drawing ------------------------------------------------
-  //
-  // A tile is 240x240, rendered at about 62% opacity behind a caption whose
-  // scrim covers the bottom third. So: keep the subject in the upper two
-  // thirds, and lean on shape rather than fine detail, because none of it
-  // survives being shrunk and dimmed.
-
-  var PV_UID = 0;
-  // A vertical fade, used to give filled areas some depth.
-  // values -> a smooth-ish polyline across the box, plus the same closed to
-  // the floor so it can be filled.
-  // Stable pseudo-random from a string, so a tile looks the same every visit.
-  // Parked, not deleted. These still render, still work and still answer to
-  // their own URL; they just do not sit on the front of the hub any more.
-  // Everything here is one line away from coming back.
-  // Parked on the main site, present on the WIP build. Explore is a filtering
-  // tool rather than something to read, which is not what the four tiles are for.
-  var PARKED = { explore: 1 };
-
-  // The hub is a wall to be judged, so the tiles are grouped by what they are
-  // rather than by script-tag order. A slug missing from here still shows up,
-  // under Everything else, which is how a new suite appears without this list
-  // needing to know about it first.
-  // The main site shows four. Everything else is built and kept, and lives on
-  // the WIP site; see tools/build_wip.py. A slug missing here still appears,
-  // under Everything else, so a new suite shows up without editing this.
-  var GROUPS = [
-    { name: "", slugs: ["odd", "gallery", "stats", "deep"] },
-  ];
-
-  // Each suite may ship its own CSS. Injected once, on first use, so a suite
-  // nobody opens costs nothing.
-  var SUITE_CSS_DONE = {};
-  // The strip under the header on a suite page: a way back and a way sideways.
-  // It lives outside #app so it survives the page rewriting itself, which the
-  // older pages do on every interaction.
-  // stats.json and the official sheet are loaded lazily, and a suite reads
-  // them straight off the object it is handed. Without this a suite opened
-  // from a cold start, by a bookmark or a shared link, would find both null
-  // and quietly render an almost empty page: not an error, just nothing. Both
-  // calls are memoised, so this costs one fetch each per session.
-  // The parked wall. Same tiles, same previews, just not on the front.
-  // The hash a suite was opened at, so an async fill can tell whether the
-  // reader is still on the page it was fetched for. It used to assume
-  // "#/data/<slug>", which stopped being true when Statistics and More stats
-  // became top-level tabs, and both then sat on their loading panel.
-  var suiteHash = null;
 
   function router() {
     stopMap(); // cancel any running map-heat animation before leaving/re-rendering
