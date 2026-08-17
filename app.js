@@ -591,7 +591,7 @@
       '<div class="big">Could not load the data</div>' +
       '<div class="sub">The site data did not come back. This is usually temporary.' +
       (detail ? " " + esc(detail) : "") + "</div>" +
-      '<div style="margin-top:16px"><button id="retry-load">Try again</button></div>' +
+      '<div style="margin-top:40px"><button id="retry-load">Try again</button></div>' +
       "</div>";
     var b = document.getElementById("retry-load");
     if (b) b.addEventListener("click", function () { location.reload(); });
@@ -1182,7 +1182,7 @@
     // reached by typing the URL or following an old link.
     if (!currentUser.loggedIn) {
       APP.innerHTML =
-        '<div class="page-head"><h1>Upload replays</h1></div>' +
+        '<div class="page-head"><h1 class="upload">Upload replays</h1></div>' +
         '<div class="up-signin-banner"><div><b>Sign in to upload.</b> Replays are ' +
         "tied to the Steam account that sends them. That is how the site knows who " +
         'recorded what.</div><a class="btn-signin" href="/auth/steam/login">' +
@@ -1265,8 +1265,9 @@
 
   function renderAbout() {
     APP.innerHTML =
-      '<div class="page-head"><h1>About this data</h1></div>' +
+      '<div class="page-head"><h1 class="search">About this data</h1></div>' +
       '<div class="panel" style="max-width:64ch">' +
+      '<h2 style="font-size:16px;margin:0px 0 6px">Data source</h2>' +
       '<p>Everything here comes out of .replay files. Tyr writes one to your disk at the end of a ' +
       'match, and players upload them. There is no live game feed behind this and no official Tyr API.</p>' +
       '<p>That makes the picture <b>incomplete</b>. Only uploaded matches are here. If someone ' +
@@ -1274,14 +1275,16 @@
       'does not exist as far as this site is concerned.</p>' +
       '<p>A match tagged <b>Unknown</b> instead of Elimination or Capture is fine. Every player, ' +
       'tank and score on it is real. The decoder could not tell which signal ended the match, and ' +
-      'it would sooner say Unknown than guess.</p>' +
-      '<h2 style="font-size:16px;margin:22px 0 6px">Who sees what</h2>' +
+      'it would sooner say Unknown than guess.</p></div>' +
+      '<div class="panel" style="max-width:64ch">' +
+      '<h2 style="font-size:16px;margin:0px 0 6px">Who sees what</h2>' +
       '<p><b>Signed in players see everything about other players by default.</b> Signing in with ' +
       'Steam proves you are a real player and not an anonymous scraper. Two things stay hidden even ' +
       'from them: your Steam ID, unless you opt in to show it, and any individual stat you mark ' +
       '“hide from signed in too.”</p>' +
-      '<p><b>Signed out visitors</b> see only the players who chose to be public.</p>' +
-      '<h2 style="font-size:16px;margin:22px 0 6px">Your settings</h2>' +
+      '<p><b>Signed out visitors</b> see only the players who chose to be public.</p></div>' +
+      '<div class="panel" style="max-width:64ch">' +
+      '<h2 style="font-size:16px;margin:0px 0 6px">Your settings</h2>' +
       '<p>The gear at the top right is where you decide what others see of you.</p>' +
       '<ul style="margin:0 0 12px;padding-left:20px;line-height:1.7">' +
       '<li><b>Show my Steam ID</b> is off. It applies to every viewer, signed in ones included. ' +
@@ -1297,7 +1300,7 @@
       'and no other player sees it either way. You always see your own data in full.</li>' +
       '</ul>' +
       '<p><a href="/auth/steam/login">Sign in via Steam</a> to see all of it and to set your own ' +
-      'visibility.</p>' +
+      'visibility.</p></div>' +
       "</div>";
   }
 
@@ -1522,7 +1525,7 @@
 
   function renderOnline() {
     APP.innerHTML =
-      '<div class="page-head"><h1>Players online</h1></div>' +
+      '<div class="page-head"><h1 class="skull">Players online</h1></div>' +
       '<div class="panel" id="online-slot"><p class="small">Loading…</p></div>';
 
     function paint(d) {
@@ -1694,7 +1697,7 @@
 
     APP.innerHTML =
       steamChartSection() +
-      '<div class="page-head"><h1>Players</h1>' +
+      '<div class="page-head"><h1 class="skull">Players</h1>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
       '<input type="search" class="search-box" id="lb-search" placeholder="Search player name or ID…" value="' + esc(lbState.q) + '">' +
       '<input type="number" min="0" class="search-box" id="lb-min-games" placeholder="Min games" style="width:110px" value="' + (lbState.minGames || "") + '">' +
@@ -1704,14 +1707,14 @@
       "</div></div>" +
       lbBuildCaption() +
       lbFilterCaption() +
-      '<div class="panel"><div class="table-scroll"><table id="lb-table"><thead><tr>' +
+      '<div class="table-scroll"><table id="lb-table"><thead><tr>' +
       "<th>#</th><th>Player</th>" +
       '<th class="sortable" data-key="games">Games<span class="arrow"></span></th>' +
       '<th class="sortable" data-key="avg.dmg">Avg DMG<span class="arrow"></span></th>' +
       '<th class="sortable" data-key="avg.assist">Avg AST<span class="arrow"></span></th>' +
       '<th class="sortable" data-key="avg.blocked">Avg BLK<span class="arrow"></span></th>' +
       '<th class="sortable" data-key="avg.kills">Avg Kills<span class="arrow"></span></th>' +
-      '</tr></thead><tbody id="lb-body"></tbody></table></div></div>';
+      '</tr></thead><tbody id="lb-body"></tbody></table></div>';
 
     renderLeaderboardBody(players);
 
@@ -1966,8 +1969,8 @@
         "</tr></thead><tbody>" + tanksRows + "</tbody></table></div></div>";
 
     APP.innerHTML =
-      '<div class="player-head"><div class="player-label">' + esc(p.label) + "</div>" +
-      idBadge + akaLine + "</div>" +
+      '<div class="player-head"><h1 class="player-label skull">' + esc(p.label) + "</h1>" +
+      idBadge + "</div>"+ akaLine +
       '<div class="stat-grid">' +
       '<div class="stat-card"><div class="label">Clan</div><div class="stat-value">' + hideAware(p, "clan", p.clan ? esc(p.clan) : '<span class="small" style="opacity:.55">None</span>') + "</div></div>" +
       '<div class="stat-card"><div class="label">Games</div><div class="stat-value num">' + hideAware(p, "games", fmtNum(p.games)) + "</div></div>" +
@@ -1981,14 +1984,14 @@
       '<div class="stat-card"><div class="label">Avg Survival</div><div class="stat-value num">' + hideAware(p, "survival", fmtClock(p.avg_survival_sec)) + "</div></div>" +
       '<div class="stat-card"><div class="label">Survival %</div><div class="stat-value num">' + hideAware(p, "survival", fmtPct(p.avg_survival_pct)) + "</div></div>" +
       "</div>" +
-      squadmatesPanel(p) +
-      '<div class="panel"><h2>Career totals</h2><div class="stat-grid">' +
+      '<h2>Career totals</h2><div class="stat-grid">' +
       '<div class="stat-card"><div class="label">Total DMG</div><div class="stat-value num">' + hideAware(p, "damage", fmtNum(p.total.dmg)) + "</div></div>" +
       '<div class="stat-card"><div class="label">Total Assist</div><div class="stat-value num">' + hideAware(p, "assist", fmtNum(p.total.assist)) + "</div></div>" +
       '<div class="stat-card"><div class="label">Total Blocked</div><div class="stat-value num">' + hideAware(p, "blocked", fmtNum(p.total.blocked)) + "</div></div>" +
       '<div class="stat-card"><div class="label">Total Kills</div><div class="stat-value num">' + hideAware(p, "kills", fmtNum(p.total.kills)) + "</div></div>" +
-      "</div></div>" +
+      "</div>" +
       tanksPanel +
+      squadmatesPanel(p) +
       '<div class="panel"><h2>Match history</h2><div class="table-scroll"><table id="history-table"><thead><tr>' +
       "<th>Date</th><th>Map</th><th>Result</th><th>Tank</th><th>Kills</th>" +
       "</tr></thead><tbody>" + historyRows + "</tbody></table></div></div>";
@@ -2148,7 +2151,7 @@
   function scoreText(m) {
     if (m.score_ally === null || m.score_ally === undefined ||
         m.score_enemy === null || m.score_enemy === undefined) return "-";
-    return fmtNum(m.score_ally) + " : " + fmtNum(m.score_enemy);
+    return fmtNum(m.score_ally) + "hp / " + fmtNum(m.score_enemy) + "hp";
   }
 
   // reused by the Matches page and each per-map page's "matches on this map" list
@@ -2359,7 +2362,7 @@
                  ["length-asc", "Shortest"]];
 
     APP.innerHTML =
-      '<div class="page-head"><h1>Matches</h1><div class="m-count" id="m-count"></div></div>' +
+      '<div class="page-head"><h1 class="sword">Matches</h1><div class="m-count" id="m-count"></div></div>' +
       '<div class="m-controls">' +
         '<input type="search" class="search-box m-search" id="m-q" placeholder="Search player, clan, map or uploader…" value="' + esc(mState.q) + '">' +
         '<select class="search-box" id="m-build"><option value="">All versions</option>' + buildOptions(mState.build) + "</select>" +
@@ -2463,26 +2466,24 @@
     }
 
     APP.innerHTML =
-      '<div class="page-head"><h1>' + (m.map ? esc(m.map) : "Unknown map") + "</h1>" +
+      '<div class="page-head"><h1 class="map">' + (m.map ? esc(m.map) : "Unknown map") + "</h1>" +
       '<div class="small">' + esc(fmtDateTime(m.captured_unix, true)) +
       ' &middot; <span class="mono">' + esc(m.match_id) + "</span>" + credit + "</div></div>" +
       '<div class="match-head panel"><div class="match-head-row">' +
       mapImgTag(m.map, "match-head-map") +
       '<div class="match-head-facts">' +
-      "<div>" + resultChip(m.win_type) + " " + typeChip(m) + "</div>" +
+      "<div>" + resultChip(m.win_type) + " " + '<span class="chip chip-standard">' + teamA.length + " v " + teamB.length + '</span>' + " " + typeChip(m) + "</div>" +
       (m.win_type ? "" :
         '<div class="small" style="margin-top:4px;color:var(--dim)">The decoder could not confirm ' +
         "how this match ended. The rest of the data is real.</div>") +
-      '<div class="score" style="margin-top:6px">Final HP ' + scoreText(m) + "</div>" +
-      '<div class="small" style="margin-top:6px">' + teamA.length + " v " + teamB.length +
-      ' &middot; <span id="match-duration">-</span></div>' +
+      '<div class="score" style="margin:12px 0px;font-size: 1.5rem;">' + scoreText(m) + ' <span class="match-time">(<span id="match-duration">-</span>)</span>' + "</div>" +
       '<div style="margin-top:10px">' +
       '<a class="replay-dl" href="replays/' + encodeURIComponent(m.match_id) +
       '.replay" download="' + esc(slugify(m.map || "match")) + "-" + esc(m.match_id) + '.replay">' +
       "&#11015; Download replay</a>" +
       "</div>" +
       "</div></div></div>" +
-      '<div class="roster-wrap panel">' +
+      '<div class="roster-wrap">' +
       rosterTable("Team A", teamA, "side-a") +
       rosterTable("Team B", teamB, "side-b") +
       (others.length ? rosterTable("Other", others, "") : "") +
@@ -2537,15 +2538,15 @@
       return '<button class="mchip' + (c.key === bbState.key ? "" : " off") + '" data-bb-key="' + c.key + '">' + esc(c.label) + "</button>";
     }).join("");
     APP.innerHTML =
-      '<div class="page-head"><h1>Best Battles</h1></div>' +
+      '<div class="page-head"><h1 class="star">Best Battles</h1></div>' +
       '<p class="small" style="margin:-8px 0 12px">One player, one match, the highest anyone has gone in each category.</p>' +
       '<div class="maplegend" id="bb-tabs" style="margin-bottom:14px">' + tabs + "</div>" +
-      '<div class="panel"><div class="table-scroll"><table><thead><tr>' +
+      '<div class="table-scroll"><table><thead><tr>' +
       '<th>#</th><th>Player</th><th>Tank</th><th>Map</th><th>Date</th><th>Result</th>' +
       '<th class="num">DMG</th><th class="num">Kills</th><th class="num">AST</th>' +
       '<th class="num">BLK</th><th class="num">Survival</th><th class="num">Surv %</th>' +
 
-      "</tr></thead><tbody id=\"bb-body\"></tbody></table></div></div>";
+      "</tr></thead><tbody id=\"bb-body\"></tbody></table></div>";
 
     document.getElementById("bb-tabs").addEventListener("click", function (e) {
       var btn = e.target.closest("[data-bb-key]");
@@ -2617,8 +2618,8 @@
     // stay here rather than disappearing.
     APP.innerHTML =
       (SHOW_PLAYER_PAGES ? "" : popularTanksStrip() + steamChartSection()) +
-      '<div class="page-head"><h1>Tanks</h1></div>' +
-      '<div class="panel"><div class="table-scroll"><table id="tanks-table"><thead><tr>' +
+      '<div class="page-head"><h1 class="tank">Tanks</h1></div>' +
+      '<div class="table-scroll"><table id="tanks-table"><thead><tr>' +
       '<th class="sortable" data-key="tank">Tank<span class="arrow"></span></th>' +
       '<th class="sortable num" data-key="games">Games<span class="arrow"></span></th>' +
       '<th class="sortable num" data-key="winrate">Winrate<span class="arrow"></span></th>' +
@@ -2634,7 +2635,7 @@
       '<th class="sortable num" data-key="dpm">DPM<span class="arrow"></span></th>' +
       '<th class="sortable num" data-key="kill_range">Kill range<span class="arrow"></span></th>' +
       '<th class="sortable num" data-key="pick_rate">Pick rate<span class="arrow"></span></th>' +
-      "</tr></thead><tbody id=\"tanks-body\"></tbody></table></div></div>" +
+      "</tr></thead><tbody id=\"tanks-body\"></tbody></table></div>" +
       '<div id="tanks-roster"></div>';
 
     renderTanksBody();
@@ -2792,8 +2793,10 @@
     var pct = fmtPct(Math.round((t.pick_rate || 0) * 1000) / 10);
 
     APP.innerHTML =
+      '<div class="tank-stats">' +
       '<div class="player-head tank-head">' + img +
       '<div class="player-label">' + esc(t.tank) + "</div></div>" +
+      '<div id="tank-fingerprint-slot"></div></div>' +
       '<div class="stat-grid">' +
       '<div class="stat-card"><div class="label">Games</div><div class="stat-value num">' + fmtNum(t.games) + "</div></div>" +
       '<div class="stat-card"><div class="label">Winrate</div><div class="stat-value num">' + fmtPct(t.winrate) + "</div></div>" +
@@ -2810,7 +2813,6 @@
       '<div class="stat-card"><div class="label">Avg Blocked</div><div class="stat-value num">' + fmtNum(t.avg.blocked) + "</div></div>" +
       '<div class="stat-card"><div class="label">Avg Kills</div><div class="stat-value num">' + fmtNum(t.avg.kills) + "</div></div>" +
       "</div>" +
-      '<div id="tank-fingerprint-slot"></div>' +
       keystonePanel(t) +
       playersPanel +
       '<p><a href="#/tanks">&larr; Back to tanks</a></p>';
@@ -2867,12 +2869,12 @@
                display: fmtNum(Math.round(v * 10) / 10) };
     }).filter(Boolean);
     if (axes.length < 3) return "";
-    return '<div class="panel"><h2>Shape of this tank</h2>' +
+    return '<div class="panel">' +
       '<div class="fingerprint-wrap">' +
       svgRadar(axes, { color: tankColor(t.tank) || CHART_COLORS[0] }) +
       '<div class="fingerprint-key small">' +
       axes.map(function (a) {
-        return "<div><span>" + esc(a.label) + "</span><b>" + esc(a.display) +
+        return '<div><span class="fingerprint-key-label">' + esc(a.label) + "</span><b>" + esc(a.display) +
           '</b><span class="dim">' + Math.round(a.value / a.max * 100) + "% of best</span></div>";
       }).join("") + "</div></div>" +
       '<p class="small" style="margin-top:10px">Scaled to the best tank on each axis.</p></div>';
@@ -3980,7 +3982,7 @@
   function renderMapsIndex() {
     var maps = (DATA.maps || []).slice().sort(function (a, b) { return b.games - a.games; });
     if (!maps.length) {
-      APP.innerHTML = '<div class="page-head"><h1>Maps</h1></div>' +
+      APP.innerHTML =
         '<div class="panel empty-state"><div class="big">No map data yet</div>' +
         '<div class="sub">Upload a replay and the maps show up here.</div></div>';
       return;
@@ -3994,7 +3996,7 @@
         " &middot; avg " + fmtClock(mp.avg_duration_sec) + "</div>" +
         "</a>";
     }).join("");
-    APP.innerHTML = '<div class="page-head"><h1>Maps</h1>' +
+    APP.innerHTML = '<div class="page-head"><h1 class="map">Maps</h1>' +
       '<div class="small">' + maps.length + (maps.length === 1 ? " map" : " maps") + " with decoded match data</div></div>" +
       '<div class="maps-grid">' + cards + "</div>";
   }
@@ -4059,15 +4061,15 @@
     }).join("") : '<tr><td colspan="3" class="small">No tank data.</td></tr>';
 
     APP.innerHTML =
-      '<div class="page-head"><h1>' + esc(mp.map) + "</h1>" +
+      '<div class="page-head"><h1 class="map">' + esc(mp.map) + "</h1>" +
       '<div class="small">Aggregated from ' + fmtNum(mp.games) +
       (mp.games === 1 ? " decoded match" : " decoded matches") + "</div></div>" +
-      '<div class="match-head panel"><div class="match-head-row">' +
+      '<div class="map-head"><div class="match-head panel"><div class="match-head-row">' +
       mapHeroImgTag(mp.slug, "match-head-map") +
       '<div class="match-head-facts small">' +
-      "<div>Win type: " + winTypeChips(mp.win_type) + "</div>" +
+      '<div><span style="font-size: 0.9rem;font-weight: 700;">Win type: &nbsp;&nbsp;<span>' + winTypeChips(mp.win_type) + "</div>" +
       "</div></div></div>" +
-      '<div class="stat-grid">' + statCards + "</div>" +
+      '<div class="map-page-stat stat-grid">' + statCards + "</div></div>" +
       '<div class="panel"><h2>Tanks played here</h2><div class="table-scroll"><table><thead><tr>' +
       "<th>Tank</th><th>Games</th><th>Pick rate</th>" +
       "</tr></thead><tbody>" + tanksRows + "</tbody></table></div></div>" +
