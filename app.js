@@ -1369,6 +1369,10 @@
     // no fill: stated in text, never drawn as a band. See onlineChart.
     playtest: { name: "Playtest" },
     ranked: { fill: "rgba(160,107,255,0.30)", stroke: "rgba(160,107,255,0.75)", name: "Ranked queue" },
+    // Wider and fainter than a ranked block: it ran for two days and sits
+    // behind three of them, so it has to read as background, not as a fourth
+    // queue competing for attention.
+    fullstack: { fill: "rgba(79,124,255,0.10)", stroke: "rgba(79,124,255,0.30)", name: "Full stack weekend" },
     patch: { stroke: "#c98b3a", name: "Patch" },
   };
 
@@ -1457,12 +1461,40 @@
         '" text-anchor="middle" class="chart-axis-label">' + esc(fmtDay(tt)) + "</text>";
     }
 
+    // The drag-to-zoom handler needs to turn a pixel back into a time, and it
+    // only has the DOM. Rather than have it re-derive the geometry (and go
+    // silently wrong the moment any padding here changes), the numbers that
+    // define the mapping ride along on the element itself.
     return '<svg class="chart-svg online-chart" viewBox="0 0 ' + W + " " + H +
-      '" preserveAspectRatio="xMidYMid meet">' +
+      '" preserveAspectRatio="xMidYMid meet"' +
+      ' data-t0="' + t0 + '" data-t1="' + t1 + '" data-padl="' + padL +
+      '" data-plotw="' + plotW + '" data-padt="' + padT + '" data-ploth="' + plotH +
+      '" data-w="' + W + '">' +
       '<defs><linearGradient id="onlineGrad" x1="0" y1="0" x2="1" y2="0">' +
       '<stop offset="0%" stop-color="#4f7cff"></stop>' +
       '<stop offset="100%" stop-color="#a06bff"></stop></linearGradient></defs>' +
-      grid + bands + line + marks + axis + "</svg>";
+      grid + bands + line + marks + axis +
+      '<rect class="ol-zoombox" x="0" y="' + padT + '" width="0" height="' + plotH +
+      '" fill="rgba(79,124,255,0.18)" stroke="rgba(79,124,255,0.7)" stroke-width="1" ' +
+      'pointer-events="none" visibility="hidden"></rect>' +
+      '<rect class="ol-grab" x="' + padL + '" y="' + padT + '" width="' + plotW +
+      '" height="' + plotH + '" fill="transparent" style="cursor:crosshair"></rect>' +
+      "</svg>";
+  }
+
+  // A window of an existing series: the points inside [a,b], with peak and
+  // gaps recomputed so the y axis rescales to what is actually on screen
+  // instead of staying pinned to the all-time high.
+  function onlineSlice(s, a, b) {
+    var pts = (s.points || []).filter(function (p) { return p.t >= a && p.t <= b; });
+    if (pts.length < 2) return null;
+    var peak = 0;
+    for (var i = 0; i < pts.length; i++) if (pts[i].count > peak) peak = pts[i].count;
+    return {
+      points: pts, peak: peak,
+      first_unix: pts[0].t, last_unix: pts[pts.length - 1].t,
+      gaps: (s.gaps || []).filter(function (g) { return g.end >= a && g.start <= b; }),
+    };
   }
 
   function onlineLegend() {
@@ -1471,56 +1503,112 @@
     }
     return '<div class="ol-legend small">' +
       key('<i class="ol-sw" style="background:rgba(160,107,255,0.30);border-color:rgba(160,107,255,0.75)"></i>', "Ranked queue") +
+      key('<i class="ol-sw" style="background:rgba(79,124,255,0.10);border-color:rgba(79,124,255,0.30)"></i>', "Full stack") +
       key('<i class="ol-sw ol-sw-line"></i>', "Patch") +
       "</div>";
   }
 
-  var onlineRange = "playtest";   // "playtest" | "all"
+  var onlineRange = "playtest";   // "week" | "playtest" | "all"
+  var onlineZoom = null;          // [from, to] in unix seconds, set by dragging
 
   function fmtMonth(unixSec) {
     return new Date(unixSec * 1000).toLocaleDateString(undefined, { month: "short", year: "numeric" });
   }
 
   function onlineBody(d) {
-    var s = d[onlineRange] || d.playtest || d.all;
-    if (!s || !s.points || s.points.length < 2) return '<p class="small">No player history yet.</p>';
+    // "This week" is the last seven days of the full series rather than a
+    // third series in the file: the payload already carries every point, and
+    // the window that matters moves every minute.
+    var base = onlineRange === "week" ? (d.all || d.playtest) : (d[onlineRange] || d.playtest || d.all);
+    if (!base || !base.points || base.points.length < 2) return '<p class="small">No player history yet.</p>';
 
-    var wide = onlineRange === "all";
-    var pt = (d.events || []).filter(function (e) { return e.kind === "playtest"; })[0];
-    var next = (d.events || []).filter(function (e) { return e.kind === "upcoming"; })[0];
-    var head = "";
-    if (pt && !wide) {
-      var ext = (pt.extended || []).length;
-      var over = pt.end && pt.end * 1000 < Date.now();
-      head = '<p class="small" style="margin:-4px 0 10px">All of this is one playtest, ' +
-        esc(fmtDay(pt.start)) + " to " + esc(fmtDay(pt.end)) +
-        (ext ? ", extended " + (ext === 1 ? "once" : ext === 2 ? "twice" : fmtNum(ext) + " times") : "") +
-        "." +
-        // Without this the line simply stops and reads like a broken collector.
-        (over ? " It has closed, so the line ends there rather than the counter failing." : "") +
-        (next && next.at ? " The next one starts " + esc(fmtDay(next.at)) + "." : "") +
-        "</p>";
+    var s = base;
+    if (onlineRange === "week") {
+      s = onlineSlice(base, base.last_unix - 7 * 86400, base.last_unix) || base;
+    }
+    if (onlineZoom) {
+      s = onlineSlice(s, onlineZoom[0], onlineZoom[1]) || s;
     }
 
+    var wide = onlineRange === "all" && !onlineZoom;
     var span = wide
       ? fmtMonth(s.first_unix) + " to " + fmtMonth(s.last_unix)
       : fmtDay(s.first_unix) + " to " + fmtDay(s.last_unix);
 
+    function chip(key, label) {
+      return '<button class="mchip' + (onlineRange === key ? "" : " off") +
+        '" data-online="' + key + '" type="button">' + label + "</button>";
+    }
     var chips = '<div class="maplegend" style="margin-bottom:12px">' +
-      '<button class="mchip' + (onlineRange === "playtest" ? "" : " off") +
-      '" data-online="playtest" type="button">This playtest</button>' +
-      '<button class="mchip' + (onlineRange === "all" ? "" : " off") +
-      '" data-online="all" type="button">All time</button></div>';
+      chip("week", "This week") + chip("playtest", "This playtest") + chip("all", "All time") +
+      (onlineZoom ? '<button class="mchip" data-online-reset="1" type="button">Reset zoom</button>' : "") +
+      "</div>";
 
-    return chips + head + onlineLegend() + onlineChart(s, d.events) +
+    return chips + onlineLegend() + onlineChart(s, d.events) +
       '<p class="small" style="margin-top:10px">Peak ' + fmtNum(s.peak) + ". " + esc(span) + "." +
-      (d.steamdb_samples
-        ? " Our own counter samples every couple of minutes; SteamDB fills the stretches it missed."
-        : "") +
-      ((s.gaps || []).length
-        ? " Breaks in the line are where neither had a number."
-        : "") +
+      ((s.gaps || []).length ? " Breaks in the line are where neither source had a number." : "") +
+      (onlineZoom ? "" : " Drag across the chart to zoom in.") +
       "</p>";
+  }
+
+  // Drag across the plot to pick a time window.
+  //
+  // The chart is an SVG with a viewBox, so it is almost never displayed at its
+  // authored width. Pointer coordinates have to be converted through the
+  // element's actual bounding box or the selection lands somewhere else
+  // entirely on any screen that is not exactly 1240px wide.
+  function attachOnlineZoom(slot, repaint) {
+    var svg = slot.querySelector(".online-chart");
+    var grab = svg && svg.querySelector(".ol-grab");
+    var box = svg && svg.querySelector(".ol-zoombox");
+    if (!svg || !grab || !box) return;
+
+    var t0 = +svg.getAttribute("data-t0"), t1 = +svg.getAttribute("data-t1");
+    var padL = +svg.getAttribute("data-padl"), plotW = +svg.getAttribute("data-plotw");
+    var vbW = +svg.getAttribute("data-w");
+    var dragging = false, startVb = 0;
+
+    function toViewBox(clientX) {
+      var r = svg.getBoundingClientRect();
+      if (!r.width) return null;
+      return (clientX - r.left) * (vbW / r.width);
+    }
+    function toTime(vbX) {
+      var f = (vbX - padL) / plotW;
+      return t0 + Math.min(1, Math.max(0, f)) * (t1 - t0);
+    }
+
+    grab.addEventListener("pointerdown", function (e) {
+      dragging = true;
+      startVb = toViewBox(e.clientX);
+      box.setAttribute("visibility", "visible");
+      box.setAttribute("width", 0);
+      if (grab.setPointerCapture) grab.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    grab.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      var now = toViewBox(e.clientX);
+      if (now == null || startVb == null) return;
+      box.setAttribute("x", Math.min(startVb, now));
+      box.setAttribute("width", Math.abs(now - startVb));
+    });
+    function finish(e) {
+      if (!dragging) return;
+      dragging = false;
+      box.setAttribute("visibility", "hidden");
+      var endVb = toViewBox(e.clientX);
+      if (endVb == null || startVb == null) return;
+      // A click is a drag of zero width. Treat anything under a few pixels as
+      // one, so tapping the chart does not zoom to a single sample.
+      if (Math.abs(endVb - startVb) < 8) return;
+      var a = toTime(Math.min(startVb, endVb)), b = toTime(Math.max(startVb, endVb));
+      if (b - a < 300) return;    // under five minutes is not a useful window
+      onlineZoom = [Math.round(a), Math.round(b)];
+      repaint();
+    }
+    grab.addEventListener("pointerup", finish);
+    grab.addEventListener("pointercancel", function () { dragging = false; box.setAttribute("visibility", "hidden"); });
   }
 
   function renderOnline() {
@@ -1535,9 +1623,13 @@
       slot.querySelectorAll("[data-online]").forEach(function (b) {
         b.addEventListener("click", function () {
           onlineRange = b.getAttribute("data-online");
+          onlineZoom = null;      // a new range starts unzoomed
           paint(d);
         });
       });
+      var reset = slot.querySelector("[data-online-reset]");
+      if (reset) reset.addEventListener("click", function () { onlineZoom = null; paint(d); });
+      attachOnlineZoom(slot, function () { paint(d); });
     }
 
     if (ONLINE) { paint(ONLINE); return; }
@@ -2285,7 +2377,13 @@
           : recorder
             ? '<span class="mc-up" title="Recorded on this machine, not uploaded">recorded by ' +
               esc(recorder) + "</span>"
-            : "") +
+            // credit_unknown is set at build time and only on matches that
+            // never had an uploader or a recorder. A match whose uploader
+            // asked not to be named is NOT marked, and stays blank: saying
+            // "unknown" there would be a small lie about data the site has.
+            : m.credit_unknown
+              ? '<span class="mc-up" title="No uploader recorded for this match">uploader unknown</span>'
+              : "") +
       "</div>";
     return href
       ? '<a class="match-card" href="' + href + '">' + inner + "</a>"
